@@ -66,7 +66,7 @@ public class Reservas {
         this(null, idMesa, idUsuario, dataReserva, horarioInicio, horarioFim, StatusReservaEnum.PENDENTE, null);
     }
 
-    private void setHorarios(LocalTime inicio, LocalTime fim) {
+    public void setHorarios(LocalTime inicio, LocalTime fim) {
         if (inicio == null || fim == null) {
             throw new IllegalArgumentException("horarioInicio e horarioFim não podem ser nulos");
         }

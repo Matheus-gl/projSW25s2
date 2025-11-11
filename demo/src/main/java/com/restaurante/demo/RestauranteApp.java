@@ -211,84 +211,107 @@ public class RestauranteApp {
     }
 
     private void criarReservaFluxo(Integer userId, MesasRepository mesasRepo, ReservasRepository reservasRepo) {
-        try {
-            String dataStr = JOptionPane.showInputDialog("Data (YYYY-MM-DD):");
-            if (dataStr == null) return;
-            LocalDate data = LocalDate.parse(dataStr);
+    try {
+        // Painel vertical com espaçamento entre linhas
+        javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.GridLayout(6, 1, 5, 5));
 
-            String inicioStr = JOptionPane.showInputDialog("Horário início (HH:MM):");
-            if (inicioStr == null) return;
-            LocalTime inicio = LocalTime.parse(inicioStr);
+        panel.add(new javax.swing.JLabel("Data (YYYY-MM-DD):"));
+        javax.swing.JTextField dataField = new javax.swing.JTextField(20);
+        panel.add(dataField);
 
-            String fimStr = JOptionPane.showInputDialog("Horário fim (HH:MM):");
-            if (fimStr == null) return;
-            LocalTime fim = LocalTime.parse(fimStr);
+        panel.add(new javax.swing.JLabel("Horário início (HH:MM):"));
+        javax.swing.JTextField inicioField = new javax.swing.JTextField(20);
+        panel.add(inicioField);
 
-            if (!fim.isAfter(inicio)) {
-                JOptionPane.showMessageDialog(null, "horario_fim deve ser maior que horario_inicio");
-                return;
-            }
+        panel.add(new javax.swing.JLabel("Horário fim (HH:MM):"));
+        javax.swing.JTextField fimField = new javax.swing.JTextField(20);
+        panel.add(fimField);
 
-            // busca mesas disponíveis (verifica conflitos em memória)
-            List<Integer> ocupadas = reservasRepo.findAll().stream()
-                    .filter(r -> r.getDataReserva().equals(data))
-                    .filter(r -> !("CANCELADA".equalsIgnoreCase(r.getStatus().toString())
-                            || "CONCLUIDA".equalsIgnoreCase(r.getStatus().toString())))
-                    .filter(r -> timesOverlap(inicio, fim, r.getHorarioInicio(), r.getHorarioFim()))
-                    .map(r -> r.getIdMesa())
-                    .collect(Collectors.toList());
+        int result = javax.swing.JOptionPane.showConfirmDialog(
+                null,
+                panel,
+                "Criar Reserva",
+                javax.swing.JOptionPane.OK_CANCEL_OPTION,
+                javax.swing.JOptionPane.PLAIN_MESSAGE
+        );
 
-            List<com.restaurante.demo.Mesas> disponiveis = mesasRepo.findAll().stream()
-                    .filter(m -> !ocupadas.contains(m.getId_mesa()))
-                    .collect(Collectors.toList());
+        if (result != javax.swing.JOptionPane.OK_OPTION) return;
 
-            if (disponiveis.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Nenhuma mesa disponível para este horário");
-                return;
-            }
+        // Captura e valida os dados digitados
+        LocalDate data = LocalDate.parse(dataField.getText().trim());
+        LocalTime inicio = LocalTime.parse(inicioField.getText().trim());
+        LocalTime fim = LocalTime.parse(fimField.getText().trim());
 
-            StringBuilder sb = new StringBuilder("Mesas disponíveis:\n");
-            disponiveis.forEach(m -> sb.append(m.getId_mesa()).append(" - Nº: ").append(m.getNumero_mesa()).append("\n"));
-            sb.append("Digite o id_mesa desejado:");
-            String idMesaStr = JOptionPane.showInputDialog(sb.toString());
-            if (idMesaStr == null) return;
-            Integer idMesa = Integer.parseInt(idMesaStr);
-
-            Optional<com.restaurante.demo.Mesas> chosen = disponiveis.stream().filter(m -> m.getId_mesa() == idMesa).findFirst();
-            if (chosen.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "Mesa inválida");
-                return;
-            }
-
-            // Rechecar disponibilidade antes de salvar (para reduzir conflitos)
-            boolean stillFree = reservasRepo.findAll().stream()
-                    .filter(r -> r.getDataReserva().equals(data))
-                    .filter(r -> !("CANCELADA".equalsIgnoreCase(r.getStatus().toString())
-                            || "CONCLUIDA".equalsIgnoreCase(r.getStatus().toString())))
-                    .filter(r -> r.getIdMesa().equals(idMesa))
-                    .noneMatch(r -> timesOverlap(inicio, fim, r.getHorarioInicio(), r.getHorarioFim()));
-
-            if (!stillFree) {
-                JOptionPane.showMessageDialog(null, "Infelizmente a mesa foi reservada por outro usuário no intervalo.");
-                return;
-            }
-
-            // cria reserva pendente
-            Reservas reserva = new Reservas();
-            reserva.setIdMesa(idMesa);
-            reserva.setIdUsuario(userId);
-            reserva.setDataReserva(data);
-            reserva.setHorarioInicio(inicio);
-            reserva.setHorarioFim(fim);
-            reserva.setStatus(com.restaurante.demo.StatusReservaEnum.PENDENTE);
-            reservasRepo.save(reserva);
-
-            JOptionPane.showMessageDialog(null, "Reserva criada com status PENDENTE. Aguarde confirmação ou confirme manualmente em Minhas Reservas.");
-
-        } catch (DateTimeParseException | NumberFormatException ex) {
-            JOptionPane.showMessageDialog(null, "Entrada inválida: " + ex.getMessage());
+        if (!fim.isAfter(inicio)) {
+            javax.swing.JOptionPane.showMessageDialog(null, "O horário de fim deve ser maior que o de início.");
+            return;
         }
+
+        // Busca mesas disponíveis
+        List<Integer> ocupadas = reservasRepo.findAll().stream()
+                .filter(r -> r.getDataReserva().equals(data))
+                .filter(r -> !("CANCELADA".equalsIgnoreCase(r.getStatus().toString())
+                        || "CONCLUIDA".equalsIgnoreCase(r.getStatus().toString())))
+                .filter(r -> timesOverlap(inicio, fim, r.getHorarioInicio(), r.getHorarioFim()))
+                .map(r -> r.getIdMesa())
+                .collect(Collectors.toList());
+
+        List<com.restaurante.demo.Mesas> disponiveis = mesasRepo.findAll().stream()
+                .filter(m -> !ocupadas.contains(m.getId_mesa()))
+                .collect(Collectors.toList());
+
+        if (disponiveis.isEmpty()) {
+            javax.swing.JOptionPane.showMessageDialog(null, "Nenhuma mesa disponível para este horário.");
+            return;
+        }
+
+        // Lista mesas disponíveis
+        StringBuilder sb = new StringBuilder("Mesas disponíveis:\n\n");
+        disponiveis.forEach(m -> sb.append("ID: ").append(m.getId_mesa())
+                .append("  |  Número: ").append(m.getNumero_mesa()).append("\n"));
+
+        String idMesaStr = javax.swing.JOptionPane.showInputDialog(sb + "\nDigite o ID da mesa desejada:");
+        if (idMesaStr == null) return;
+        Integer idMesa = Integer.parseInt(idMesaStr);
+
+        Optional<com.restaurante.demo.Mesas> chosen = disponiveis.stream()
+                .filter(m -> m.getId_mesa() == idMesa.intValue())
+                .findFirst();
+
+        if (chosen.isEmpty()) {
+            javax.swing.JOptionPane.showMessageDialog(null, "Mesa inválida.");
+            return;
+        }
+
+        // Verifica novamente se ainda está livre
+        boolean stillFree = reservasRepo.findAll().stream()
+                .filter(r -> r.getDataReserva().equals(data))
+                .filter(r -> !("CANCELADA".equalsIgnoreCase(r.getStatus().toString())
+                        || "CONCLUIDA".equalsIgnoreCase(r.getStatus().toString())))
+                .filter(r -> r.getIdMesa().equals(idMesa))
+                .noneMatch(r -> timesOverlap(inicio, fim, r.getHorarioInicio(), r.getHorarioFim()));
+
+        if (!stillFree) {
+            javax.swing.JOptionPane.showMessageDialog(null, "Infelizmente a mesa foi reservada por outro usuário nesse intervalo.");
+            return;
+        }
+
+        // Salva a reserva
+        Reservas reserva = new Reservas();
+        reserva.setIdMesa(idMesa);
+        reserva.setIdUsuario(userId);
+        reserva.setDataReserva(data);
+        reserva.setHorarios(inicio, fim); // define os dois horários juntos
+        reserva.setStatus(com.restaurante.demo.StatusReservaEnum.PENDENTE);
+        reservasRepo.save(reserva);
+
+        javax.swing.JOptionPane.showMessageDialog(null,
+                "Reserva criada com sucesso!\nStatus: PENDENTE\nAguarde confirmação.");
+
+    } catch (DateTimeParseException | NumberFormatException ex) {
+        javax.swing.JOptionPane.showMessageDialog(null, "Entrada inválida: " + ex.getMessage());
     }
+}
 
     private boolean timesOverlap(LocalTime aStart, LocalTime aEnd, LocalTime bStart, LocalTime bEnd) {
         return aStart.isBefore(bEnd) && bStart.isBefore(aEnd);
@@ -344,99 +367,26 @@ public class RestauranteApp {
     }
 
     private void showAdminPanel(MesasRepository mesasRepo, UsuariosRepository usuariosRepo, ReservasRepository reservasRepo) {
-        // ao entrar, mostrar lista automaticamente (sem filtros) e permitir selecionar
-        
-
         while (true) {
-            String[] opts = {"Editar", "Buscar / Filtrar Reservas", "Voltar"};
-            int c = JOptionPane.showOptionDialog(null, "Admin", "Painel Admin",
-                    JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, opts, opts[0]);
 
-            if (c == 0) { // Editar: selecionar uma reserva da lista e editar
+            String[] opts = {"Editar Reservas", "Voltar"};
+            int c = JOptionPane.showOptionDialog(
+                    null,
+                    "Painel do Administrador",
+                    "Admin",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    opts,
+                    opts[0]
+            );
+
+            if (c == 0) {
                 Optional<Reservas> chosen = displayReservationsAdmin(mesasRepo, usuariosRepo, reservasRepo, null);
-                chosen.ifPresent(r -> handleAdminSelection(r, mesasRepo, usuariosRepo, reservasRepo));
-            } else if (c == 1) { // Excluir: selecionar e confirmar exclusão
-                Optional<Reservas> chosen = displayReservationsAdmin(mesasRepo, usuariosRepo, reservasRepo, null);
-                if (chosen.isPresent()) {
-                    Reservas r = chosen.get();
-                    int del = JOptionPane.showConfirmDialog(null,
-                            "Excluir reserva ID:" + r.getIdReserva() + " ?",
-                            "Confirmar exclusão", JOptionPane.YES_NO_OPTION);
-                    if (del == JOptionPane.YES_OPTION) {
-                        reservasRepo.delete(r);
-                        JOptionPane.showMessageDialog(null, "Reserva excluída.");
-                    }
-                }
-            } else if (c == 1) { // Buscar / Filtrar Reservas
-                // abrir painel de filtros e mostrar resultados
-                javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.GridLayout(10, 1, 4, 4));
-                panel.add(new javax.swing.JLabel("Filtrar por (deixe vazio para não filtrar)"));
-                panel.add(new javax.swing.JLabel("Nome do usuário:"));
-                javax.swing.JTextField nomeField = new javax.swing.JTextField(30);
-                panel.add(nomeField);
-                panel.add(new javax.swing.JLabel("Telefone do usuário:"));
-                javax.swing.JTextField telField = new javax.swing.JTextField(20);
-                panel.add(telField);
-                panel.add(new javax.swing.JLabel("Número da mesa:"));
-                javax.swing.JTextField mesaField = new javax.swing.JTextField(5);
-                panel.add(mesaField);
-                panel.add(new javax.swing.JLabel("Horário início (HH:MM) - reserva começa a partir de:"));
-                javax.swing.JTextField inicioField = new javax.swing.JTextField(5);
-                panel.add(inicioField);
-                panel.add(new javax.swing.JLabel("Horário fim (HH:MM) - reserva termina até:"));
-                javax.swing.JTextField fimField = new javax.swing.JTextField(5);
-                panel.add(fimField);
-
-                int res = JOptionPane.showConfirmDialog(null, new javax.swing.JScrollPane(panel), "Buscar / Filtrar Reservas",
-                        JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-                if (res != JOptionPane.OK_OPTION) continue;
-
-                final String nomeFilter = nomeField.getText().trim().toLowerCase();
-                final String telFilter = telField.getText().trim();
-                final String mesaFilter = mesaField.getText().trim();
-                final String inicioFilter = inicioField.getText().trim();
-                final String fimFilter = fimField.getText().trim();
-
-                final LocalTime inicioLT;
-                final LocalTime fimLT;
-                try {
-                    inicioLT = inicioFilter.isEmpty() ? null : LocalTime.parse(inicioFilter);
-                    fimLT = fimFilter.isEmpty() ? null : LocalTime.parse(fimFilter);
-                } catch (DateTimeParseException e) {
-                    JOptionPane.showMessageDialog(null, "Formato de horário inválido. Use HH:MM");
-                    continue;
-                }
-
-                Optional<Reservas> chosen = displayReservationsAdmin(mesasRepo, usuariosRepo, reservasRepo,
-                        r -> {
-                            // same filter logic used previously
-                            if (!nomeFilter.isEmpty()) {
-                                String nome = usuariosRepo.findById(r.getIdUsuario()).map(Usuarios::getNome).orElse("").toLowerCase();
-                                if (!nome.contains(nomeFilter)) return false;
-                            }
-                            if (!telFilter.isEmpty()) {
-                                String tel = usuariosRepo.findById(r.getIdUsuario()).map(Usuarios::getTelefone).orElse("");
-                                if (!tel.contains(telFilter)) return false;
-                            }
-                            if (!mesaFilter.isEmpty()) {
-                                try {
-                                    int num = Integer.parseInt(mesaFilter);
-                                    int mesaNum = mesasRepo.findById(r.getIdMesa()).map(Mesas::getNumero_mesa).orElse(-1);
-                                    if (mesaNum != num) return false;
-                                } catch (NumberFormatException ex) {
-                                    return false;
-                                }
-                            }
-                            if (inicioLT != null && r.getHorarioInicio().isBefore(inicioLT)) return false;
-                            if (fimLT != null && r.getHorarioFim().isAfter(fimLT)) return false;
-                            return true;
-                        }
-                );
-
                 chosen.ifPresent(r -> handleAdminSelection(r, mesasRepo, usuariosRepo, reservasRepo));
             } else {
                 break;
-            }
+                }
         }
     }
 
