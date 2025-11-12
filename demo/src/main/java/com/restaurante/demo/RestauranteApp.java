@@ -22,7 +22,7 @@ import jakarta.transaction.Transactional;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
-@SpringBootApplication
+//@SpringBootApplication
 public class RestauranteApp {
 
     public static void main(String[] args) {
