@@ -1,6 +1,7 @@
 package com.restaurante.demo;
 
 
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -19,6 +21,47 @@ class RestauranteOpTests {
 
 	@Autowired
 	private MockMvc mockMvc;
+
+	@Autowired
+    private RestauranteOp restauranteOp;
+
+	@MockBean
+	private UsuariosRepository usuariosRepository;
+
+	@Test
+    void deveAdicionarUsuarioSemSalvarNoBanco() throws Exception {
+        // JSON de entrada
+        String jsonUsuario = """
+            {
+                "nome": "Usuário Mock",
+                "email": "mock@email.com",
+                "senha": "1234",
+                "telefone": "999999999"
+            }
+            """;
+
+        // Usa o método criaUsuario() para gerar o usuário simulado
+        Usuarios mockUser = restauranteOp.criaUsuario(
+                "Usuário Mock",
+                "mock@email.com",
+                "1234",
+                "999999999"
+        );
+        mockUser.setIdUsuario(1); // só pra simular um ID gerado pelo banco
+
+        // Configura o comportamento do repositório mockado
+        when(usuariosRepository.save(org.mockito.ArgumentMatchers.any(Usuarios.class)))
+                .thenReturn(mockUser);
+
+        // Executa o endpoint
+        mockMvc.perform(post("/restaurante/addUser")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonUsuario))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nome").value("Usuário Mock"))
+                .andExpect(jsonPath("$.email").value("mock@email.com"));
+    
+    	}
 
 	@Test
 	void deveCriarUsuario() throws Exception {

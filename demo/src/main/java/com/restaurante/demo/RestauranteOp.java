@@ -43,14 +43,15 @@ public class RestauranteOp {
     }
     
     //url: http://localhost:8282/addUser?nome='nome'&email='email@email.com'&senha=1234&telefone=999999999
-    @GetMapping("/addUser")
-    public String adicionarUsuario(@RequestParam String nome, String email, String senha, String telefone) {
+    public String adicionarUsuario(
+        @RequestParam String nome,
+        @RequestParam String email,
+        @RequestParam String senha,
+        @RequestParam String telefone) {
 
         Usuarios usuario = criaUsuario(nome, email, senha, telefone);
-        
         usuariosRepository.save(usuario);
-        
-        return usuario.toString();
+        return "Usuário adicionado com sucesso: " + usuario.getNome();
     }
 
     /*
@@ -64,21 +65,18 @@ public class RestauranteOp {
     */
 
     @PostMapping("/addUser")
-    public String adicionarUsuario(@RequestBody Usuarios usuario) {
-        usuariosRepository.save(usuario);
-        return usuario.toString();
+    public Usuarios adicionarUsuario(@RequestBody Usuarios usuario) {
+        return usuariosRepository.save(usuario);
     }
 
     @PostMapping("/addMesa")
-    public String adicionarMesa(@RequestBody Mesas mesa) {
-        mesasRepository.save(mesa);
-        return mesa.toString();
+    public Mesas adicionarMesa(@RequestBody Mesas mesa) {
+        return mesasRepository.save(mesa);
     }
 
     @PostMapping("/addReserva")
-    public String adicionarReserva(@RequestBody Reservas reserva) {
-        reservasRepository.save(reserva);
-        return reserva.toString();
+    public Reservas adicionarReserva(@RequestBody Reservas reserva) {
+        return reservasRepository.save(reserva);
     }
     
     @GetMapping("/criaUsuario")
